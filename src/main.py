@@ -54,21 +54,28 @@ async def main():
                                  Date=r.get("Date", ""), Platform=r.get("Scientific_Platform") or r.get("Site", ""), text=str(text)))
         cands = list(S.candidates(rows)); Actor.log.info(f"{len(rows)} rows | {len(cands)} sentences name a KOL next to a conference word")
         pipe = None
+        # zero-shot classifier (open source, CPU). GLiClass scored every sentence ~1.0 in this environment (30-Sep test), so it was replaced.
+        NLI = {"A doctor presented research at a medical conference.": "Presentation",
+               "A poster or abstract was presented at a scientific meeting.": "Poster / abstract",
+               "A doctor speaks, chairs or moderates a session at a medical conference.": "Session role (speaker / chair / moderator)",
+               "An upcoming medical conference or meeting is announced.": "Upcoming meeting",
+               "A doctor received an award at a medical meeting.": "Award at a meeting",
+               "This text is not about a medical conference.": "Not conference"}
+        H = list(NLI)
         if inp.get("useModel", True) and cands:
-            from gliclass import GLiClassModel, ZeroShotClassificationPipeline
-            from transformers import AutoTokenizer
-            m = "knowledgator/gliclass-small-v1.0"
-            pipe = ZeroShotClassificationPipeline(GLiClassModel.from_pretrained(m), AutoTokenizer.from_pretrained(m), classification_type="multi-label", device="cpu")
-            for probe in ("Dr. Smith presented the phase 3 trial results at the ACR Convergence annual meeting.", "The Steelers released linebacker Smith before the roster deadline."):
-                Actor.log.info(f"self-check: {probe[:60]} -> {[(x['label'][:28], round(x['score'], 3)) for x in pipe(probe, S.LABELS, threshold=0.0)[0]]}")
-        thr, out, seen = float(inp.get("threshold", 0.45)), [], set()
+            from transformers import pipeline
+            pipe = pipeline("zero-shot-classification", model="MoritzLaurer/deberta-v3-base-zeroshot-v2.0", device=-1)
+            for probe in ("Dr. Smith presented the phase 3 trial results at the ACR Convergence annual meeting.", "The Steelers released linebacker Smith before the roster deadline.", "Ask Congress to weigh in with CMS on the new payment rule."):
+                res = pipe(probe, H, multi_label=False, hypothesis_template="{}")
+                Actor.log.info(f"self-check: {probe[:55]} -> {[(NLI[l][:22], round(s, 3)) for l, s in zip(res['labels'], res['scores'])][:3]}")
+        thr, out, seen = float(inp.get("threshold", 0.4)), [], set()
         for r, s, ctx in cands:
             conf = ", ".join(sorted({x.group(0) for x in S.CONF.finditer(s)}, key=str.lower))
             if pipe:
-                res = pipe(ctx, S.LABELS, threshold=0.0)[0]
-                best = max((x for x in res if x["label"] != S.LABELS[5]), key=lambda x: x["score"]); none = next((x["score"] for x in res if x["label"] == S.LABELS[5]), 0)
-                if best["score"] < thr or none > best["score"]: continue
-                kind, score = S.SHORT[best["label"]], round(best["score"], 3)
+                res = pipe(ctx, H, multi_label=False, hypothesis_template="{}")
+                top, score = res["labels"][0], res["scores"][0]
+                if NLI[top] == "Not conference" or score < thr: continue
+                kind, score = NLI[top], round(score, 3)
             else:
                 kind, score = "Keyword match", ""
             key = (r["KOL_ID"], r["URL"], s[:80])

@@ -24,14 +24,14 @@
                                     "description":  "latest = the newest Delivery_ tab plus Monitor_Review, Monitor_Social and Team_Review; or a comma-separated list of tab names; or all."
                                 },
                        "threshold":  {
-                                         "title":  "GLiClass threshold",
+                                         "title":  "Model threshold",
                                          "type":  "number",
                                          "editor":  "number",
-                                         "default":  0.45,
-                                         "description":  "Minimum score for a signal (0-1)."
+                                         "default":  0.4,
+                                         "description":  "Minimum score (0-1) of the best conference label for a sentence to be kept."
                                      },
                        "useModel":  {
-                                        "title":  "Use the GLiClass model",
+                                        "title":  "Use the zero-shot model",
                                         "type":  "boolean",
                                         "default":  true,
                                         "description":  "Off = keyword-only pass (rougher)."

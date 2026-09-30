@@ -1,6 +1,7 @@
 ﻿apify>=2.0.0
-gliclass
-transformers>=4.48.0,<4.52.0
+transformers>=4.44.0
+sentencepiece
+protobuf
 pandas
 google-auth
 requests
