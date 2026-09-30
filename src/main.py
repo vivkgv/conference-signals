@@ -1,4 +1,4 @@
-"""Apify actor: Conference Signals (GLiClass). Reads a Press Monitor Google Sheet, writes a Conference_Signals tab + dataset."""
+﻿"""Apify actor: Conference Signals (GLiClass). Reads a Press Monitor Google Sheet, writes a Conference_Signals tab + dataset."""
 import json, re, requests, pandas as pd
 from apify import Actor
 from google.oauth2 import service_account
@@ -59,6 +59,8 @@ async def main():
             from transformers import AutoTokenizer
             m = "knowledgator/gliclass-small-v1.0"
             pipe = ZeroShotClassificationPipeline(GLiClassModel.from_pretrained(m), AutoTokenizer.from_pretrained(m), classification_type="multi-label", device="cpu")
+            for probe in ("Dr. Smith presented the phase 3 trial results at the ACR Convergence annual meeting.", "The Steelers released linebacker Smith before the roster deadline."):
+                Actor.log.info(f"self-check: {probe[:60]} -> {[(x['label'][:28], round(x['score'], 3)) for x in pipe(probe, S.LABELS, threshold=0.0)[0]]}")
         thr, out, seen = float(inp.get("threshold", 0.45)), [], set()
         for r, s, ctx in cands:
             conf = ", ".join(sorted({x.group(0) for x in S.CONF.finditer(s)}, key=str.lower))
