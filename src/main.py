@@ -59,7 +59,8 @@ async def main():
         SYSTEM = ("You classify text from a news article, post or web page that names a medical doctor (the KOL), for a medical-conference intelligence team. "
                   "Answer ONLY JSON: {\"signal\":\"Presentation\"|\"Poster / abstract\"|\"Session role (speaker / chair / moderator)\"|\"Upcoming meeting\"|\"Award at a meeting\"|\"Not conference\","
                   "\"conference\":\"<meeting name or empty>\",\"confidence\":<0-1>}. Use Not conference for press conferences, the US Congress or legislative hearings, "
-                  "sports, law, tax, business or political meetings, anything not about a medical/scientific meeting, or when the named person is clearly not a physician or scientist.")
+                  "sports, law, tax, business or political meetings, anything not about a medical/scientific meeting, or when the named person is clearly not a physician or scientist. "
+                  "Use Award at a meeting ONLY when an award or honour is actually given; a registration or invitation notice is Upcoming meeting. Put the meeting name in conference, or empty if none is named.")
         def ask(kol, text):
             for _ in range(3):
                 try:
@@ -87,10 +88,12 @@ async def main():
                 except Exception: c = 0.0
                 if v.get("signal") in (None, "", "Not conference") or c < thr: continue
                 kind, score = v.get("signal"), round(c, 2)
-                if v.get("conference"): conf = str(v["conference"])
+                cn = str(v.get("conference") or "").strip()
+                if len(cn) > 3 and cn.lower().strip(".") not in ("not specified", "unknown", "none", "n/a", "drs", "aes", "unspecified"): conf = cn
             else:
                 kind, score = "Keyword match", ""
-            k2 = (r["KOL_ID"], r["URL"], s[:80])
+            # one row per KOL and sentence, even when the same post/press release appears on several pages
+            k2 = (r["KOL_ID"], re.sub(r"\W+", " ", re.sub(r"^\s*(?:\d+\s+\w+\s+ago|[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\s*[Â·\-]\s*", "", s)).lower().strip()[:140])
             if k2 in seen: continue
             seen.add(k2)
             out.append({"KOL_ID": r["KOL_ID"], "KOL_Name": r["KOL_Name"], "Conference": conf, "Signal": kind, "Score": score, "Sentence": s,
