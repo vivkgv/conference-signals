@@ -1,14 +1,51 @@
-{
-  "title": "Conference Signals",
-  "type": "object",
-  "schemaVersion": 1,
-  "properties": {
-    "spreadsheetId": { "title": "Google Sheet ID", "type": "string", "editor": "textfield", "description": "The project's Press Monitor sheet." },
-    "serviceAccountJson": { "title": "Google service account JSON", "type": "string", "editor": "textarea", "isSecret": true, "description": "Key of an account the sheet is shared with (Editor)." },
-    "tabs": { "title": "Tabs to read", "type": "string", "editor": "textfield", "default": "latest", "description": "latest = the newest Delivery_ tab plus Monitor_Review, Monitor_Social and Team_Review; or a comma-separated list of tab names; or all." },
-    "threshold": { "title": "GLiClass threshold", "type": "number", "editor": "number", "default": 0.45, "description": "Minimum score for a signal (0-1)." },
-    "useModel": { "title": "Use the GLiClass model", "type": "boolean", "default": true, "description": "Off = keyword-only pass (rougher)." },
-    "outputTab": { "title": "Output tab", "type": "string", "editor": "textfield", "default": "Conference_Signals" }
-  },
-  "required": ["spreadsheetId", "serviceAccountJson"]
+﻿{
+    "title":  "Conference Signals",
+    "type":  "object",
+    "schemaVersion":  1,
+    "properties":  {
+                       "spreadsheetId":  {
+                                             "title":  "Google Sheet ID",
+                                             "type":  "string",
+                                             "editor":  "textfield",
+                                             "description":  "The project\u0027s Press Monitor sheet."
+                                         },
+                       "serviceAccountJson":  {
+                                                  "title":  "Google service account JSON",
+                                                  "type":  "string",
+                                                  "editor":  "textarea",
+                                                  "isSecret":  true,
+                                                  "description":  "Key of an account the sheet is shared with (Editor)."
+                                              },
+                       "tabs":  {
+                                    "title":  "Tabs to read",
+                                    "type":  "string",
+                                    "editor":  "textfield",
+                                    "default":  "latest",
+                                    "description":  "latest = the newest Delivery_ tab plus Monitor_Review, Monitor_Social and Team_Review; or a comma-separated list of tab names; or all."
+                                },
+                       "threshold":  {
+                                         "title":  "GLiClass threshold",
+                                         "type":  "number",
+                                         "editor":  "number",
+                                         "default":  0.45,
+                                         "description":  "Minimum score for a signal (0-1)."
+                                     },
+                       "useModel":  {
+                                        "title":  "Use the GLiClass model",
+                                        "type":  "boolean",
+                                        "default":  true,
+                                        "description":  "Off = keyword-only pass (rougher)."
+                                    },
+                       "outputTab":  {
+                                         "title":  "Output tab",
+                                         "type":  "string",
+                                         "editor":  "textfield",
+                                         "default":  "Conference_Signals",
+                                         "description":  "Tab written in the Google Sheet (created if missing, replaced on each run)."
+                                     }
+                   },
+    "required":  [
+                     "spreadsheetId",
+                     "serviceAccountJson"
+                 ]
 }
