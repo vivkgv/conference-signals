@@ -53,34 +53,46 @@ async def main():
                 rows.append(dict(tab=t, KOL_ID=r.get("KOL_ID", ""), KOL_Name=r.get("KOL_Name", ""), URL=r.get("URL", ""), Title=r.get("Topic") or r.get("Title", ""),
                                  Date=r.get("Date", ""), Platform=r.get("Scientific_Platform") or r.get("Site", ""), text=str(text)))
         cands = list(S.candidates(rows)); Actor.log.info(f"{len(rows)} rows | {len(cands)} sentences name a KOL next to a conference word")
-        pipe = None
-        # zero-shot classifier (open source, CPU). GLiClass scored every sentence ~1.0 in this environment (30-Sep test), so it was replaced.
-        NLI = {"A doctor presented research at a medical conference.": "Presentation",
-               "A poster or abstract was presented at a scientific meeting.": "Poster / abstract",
-               "A doctor speaks, chairs or moderates a session at a medical conference.": "Session role (speaker / chair / moderator)",
-               "An upcoming medical conference or meeting is announced.": "Upcoming meeting",
-               "A doctor received an award at a medical meeting.": "Award at a meeting",
-               "This text is not about a medical conference.": "Not conference"}
-        H = list(NLI)
-        if inp.get("useModel", True) and cands:
-            from transformers import pipeline
-            pipe = pipeline("zero-shot-classification", model="MoritzLaurer/deberta-v3-base-zeroshot-v2.0", device=-1)
+        # Haiku sorts each candidate sentence (30-Sep: GLiClass scored everything ~1.0, DeBERTa zero-shot timed out on Apify's CPU)
+        key = inp.get("anthropicApiKey") or ""
+        use_ai = bool(inp.get("useModel", True) and key)
+        SYSTEM = ("You classify text from a news article, post or web page that names a medical doctor (the KOL), for a medical-conference intelligence team. "
+                  "Answer ONLY JSON: {\"signal\":\"Presentation\"|\"Poster / abstract\"|\"Session role (speaker / chair / moderator)\"|\"Upcoming meeting\"|\"Award at a meeting\"|\"Not conference\","
+                  "\"conference\":\"<meeting name or empty>\",\"confidence\":<0-1>}. Use Not conference for press conferences, the US Congress or legislative hearings, "
+                  "sports, law, tax, business or political meetings, anything not about a medical/scientific meeting, or when the named person is clearly not a physician or scientist.")
+        def ask(kol, text):
+            for _ in range(3):
+                try:
+                    rr = requests.post("https://api.anthropic.com/v1/messages", timeout=60,
+                                       headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                                       json={"model": "claude-haiku-4-5-20251001", "max_tokens": 150, "system": SYSTEM,
+                                             "messages": [{"role": "user", "content": f"KOL: {kol}\nTEXT: {text[:1500]}"}]})
+                    t = "".join(c.get("text", "") for c in rr.json().get("content", []))
+                    mm = re.search(r"\{[\s\S]*\}", t)
+                    if mm: return json.loads(mm.group(0))
+                except Exception as ex:
+                    Actor.log.warning(f"AI check retry: {str(ex)[:80]}")
+            return {"signal": "Not conference", "conference": "", "confidence": 0}
+        if use_ai:
             for probe in ("Dr. Smith presented the phase 3 trial results at the ACR Convergence annual meeting.", "The Steelers released linebacker Smith before the roster deadline.", "Ask Congress to weigh in with CMS on the new payment rule."):
-                res = pipe(probe, H, multi_label=False, hypothesis_template="{}")
-                Actor.log.info(f"self-check: {probe[:55]} -> {[(NLI[l][:22], round(s, 3)) for l, s in zip(res['labels'], res['scores'])][:3]}")
-        thr, out, seen = float(inp.get("threshold", 0.4)), [], set()
+                Actor.log.info(f"self-check: {probe[:55]} -> {ask('Dr. Smith', probe)}")
+        elif inp.get("useModel", True):
+            Actor.log.warning("No Anthropic API key - keyword-only pass (rougher)")
+        thr, out, seen = float(inp.get("threshold", 0.6)), [], set()
         for r, s, ctx in cands:
             conf = ", ".join(sorted({x.group(0) for x in S.CONF.finditer(s)}, key=str.lower))
-            if pipe:
-                res = pipe(ctx, H, multi_label=False, hypothesis_template="{}")
-                top, score = res["labels"][0], res["scores"][0]
-                if NLI[top] == "Not conference" or score < thr: continue
-                kind, score = NLI[top], round(score, 3)
+            if use_ai:
+                v = ask(r["KOL_Name"], ctx)
+                try: c = float(v.get("confidence", 0) or 0)
+                except Exception: c = 0.0
+                if v.get("signal") in (None, "", "Not conference") or c < thr: continue
+                kind, score = v.get("signal"), round(c, 2)
+                if v.get("conference"): conf = str(v["conference"])
             else:
                 kind, score = "Keyword match", ""
-            key = (r["KOL_ID"], r["URL"], s[:80])
-            if key in seen: continue
-            seen.add(key)
+            k2 = (r["KOL_ID"], r["URL"], s[:80])
+            if k2 in seen: continue
+            seen.add(k2)
             out.append({"KOL_ID": r["KOL_ID"], "KOL_Name": r["KOL_Name"], "Conference": conf, "Signal": kind, "Score": score, "Sentence": s,
                         "Article_Title": r["Title"], "Article_Date": r["Date"], "Platform": r["Platform"], "URL": r["URL"], "Source_Tab": r["tab"]})
         df = pd.DataFrame(out, columns=["KOL_ID", "KOL_Name", "Conference", "Signal", "Score", "Sentence", "Article_Title", "Article_Date", "Platform", "URL", "Source_Tab"])

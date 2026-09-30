@@ -24,14 +24,14 @@
                                     "description":  "latest = the newest Delivery_ tab plus Monitor_Review, Monitor_Social and Team_Review; or a comma-separated list of tab names; or all."
                                 },
                        "threshold":  {
-                                         "title":  "Model threshold",
+                                         "title":  "Minimum AI confidence",
                                          "type":  "number",
                                          "editor":  "number",
-                                         "default":  0.4,
-                                         "description":  "Minimum score (0-1) of the best conference label for a sentence to be kept."
+                                         "default":  0.6,
+                                         "description":  "Signals below this Haiku confidence (0-1) are dropped."
                                      },
                        "useModel":  {
-                                        "title":  "Use the zero-shot model",
+                                        "title":  "Use the AI check (Haiku)",
                                         "type":  "boolean",
                                         "default":  true,
                                         "description":  "Off = keyword-only pass (rougher)."
@@ -42,7 +42,14 @@
                                          "editor":  "textfield",
                                          "default":  "Conference_Signals",
                                          "description":  "Tab written in the Google Sheet (created if missing, replaced on each run)."
-                                     }
+                                     },
+                       "anthropicApiKey":  {
+                                               "title":  "Anthropic API key",
+                                               "type":  "string",
+                                               "editor":  "textfield",
+                                               "isSecret":  true,
+                                               "description":  "Key for the Haiku check that sorts each candidate sentence."
+                                           }
                    },
     "required":  [
                      "spreadsheetId",
