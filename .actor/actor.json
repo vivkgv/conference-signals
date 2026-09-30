@@ -1,0 +1,9 @@
+   {
+     "actorSpecification": 1,
+     "name": "conference-signals",
+     "title": "Conference Signals (GLiClass)",
+     "description": "Finds sentences in a Press Monitor sheet where a roster KOL presents, speaks/chairs, shows a poster/abstract, receives an award at a meeting or heads to an upcoming meeting, and writes them to a Conference_Signals tab.",
+     "version": "0.1",
+     "input": "./input_schema.json",
+     "dockerfile": "../Dockerfile"
+   }
