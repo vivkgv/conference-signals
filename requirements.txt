@@ -1,0 +1,6 @@
+apify>=2.0.0
+gliclass
+transformers>=4.48.0
+pandas
+google-auth
+requests
